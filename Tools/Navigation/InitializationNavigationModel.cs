@@ -10,20 +10,23 @@ namespace KMA.ProgrammingInCSharp2019.Practice7.UserList.Tools.Navigation
         {
             
         }
-   
-        protected override void InitializeView(ViewType viewType, User user)
+        
+        protected override void InitializeView(ViewType viewType, MyProcess process)
         {
             switch (viewType)
             {
       
                 case ViewType.Main:
                     if(ViewsDictionary.ContainsKey(viewType))
-                        ViewsDictionary[viewType] = new UserListView(user);
+                        ViewsDictionary[viewType] = new UserListView();
                     else
-                        ViewsDictionary.Add(viewType, new UserListView(user));
+                        ViewsDictionary.Add(viewType, new UserListView());
                     break;
-                case ViewType.AddUser:
-                    ViewsDictionary.Add(viewType, new FormView());
+                case ViewType.SeeInfo:
+                    if (ViewsDictionary.ContainsKey(viewType))
+                        ViewsDictionary[viewType] = new FormView(process);
+                    else
+                        ViewsDictionary.Add(viewType, new FormView(process));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(viewType), viewType, null);

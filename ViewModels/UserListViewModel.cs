@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using KMA.ProgrammingInCSharp2019.Practice7.UserList.Models;
 using KMA.ProgrammingInCSharp2019.Practice7.UserList.Properties;
@@ -18,150 +20,59 @@ namespace KMA.ProgrammingInCSharp2019.Practice7.UserList.ViewModels
 {
     class UserListViewModel : INotifyPropertyChanged
     {
-        private ObservableCollection<User> _users;
+        private ObservableCollection<MyProcess> _process;
+        private CollectionViewSource _viewSource;
         private Thread _workingThread;
+        private BackgroundWorker _backgroundWorker;
+        private BackgroundWorker _backgroundTimer;
+        private BackgroundWorker _backgroundUpdater;
         private CancellationToken _token;
         private CancellationTokenSource _tokenSource;
-        private string _nameFilter = "";
-        private string _surnameFilter = "";
-        private string _emailFilter = "";
-        private DateTime _fromBthFilter = DateTime.MinValue;
-        private DateTime _toBthFilter = DateTime.Today;
-        private string _sunSFilter = "";
-        private string _chineseSFilter = "";
-        private string _statusFilter = "";
-        private string _bthFilter = "";
+        private bool _loaded;
+        private int _time;
+        private string _lastUpdate;
         private RelayCommand<object> _saveCommand;
-        private RelayCommand<object> _deleteUsersCommand;
-        private RelayCommand<object> _createUserCommand;
 
-        public ObservableCollection<User> Users
+        public ObservableCollection<MyProcess> MyProcesses
         {
-            get => _users;
+            get { return _process; }
             set
             {
-                _users = value;
+                _process = value;
                 OnPropertyChanged();
             }
         }
 
-        public string NameFilter
+        public CollectionViewSource ViewSource
         {
-            get => _nameFilter;
+            get { return _viewSource; }
             set
             {
-                _nameFilter = value;
-                UpdateFilter();
+                _viewSource = value;
+                OnPropertyChanged();
             }
         }
 
-        public string SurnameFilter
+        public string LastUpdate
         {
-            get => _surnameFilter;
+            get => _lastUpdate;
             set
             {
-                _surnameFilter = value;
-                UpdateFilter();
+                _lastUpdate = value;
+                OnPropertyChanged();
             }
         }
-
-        public string EmailFilter
+        public UserListViewModel()
         {
-            get => _emailFilter;
-            set
-            {
-                _emailFilter = value;
-                UpdateFilter();
-            }
-        }
-
-        public DateTime FromBthFilter
-        {
-            get => _fromBthFilter;
-            set
-            {
-                _fromBthFilter = value;
-                UpdateFilter();
-            }
-        }
-
-        public DateTime ToBthFilter
-        {
-            get => _toBthFilter;
-            set
-            {
-                _toBthFilter = value;
-                UpdateFilter();
-            }
-        }
-
-        public string SunSFilter
-        {
-            get => _sunSFilter;
-            set
-            {
-                _sunSFilter = value;
-                UpdateFilter();
-            }
-        }
-
-        public string ChineseSFilter
-        {
-            get => _chineseSFilter;
-            set
-            {
-                _chineseSFilter = value;
-                UpdateFilter();
-            }
-        }
-
-        public string BthFilter
-        {
-            get => _bthFilter;
-            set
-            {
-                _bthFilter = value;
-                UpdateFilter();
-            }
-        }
-
-        public string StatusFilter
-        {
-            get => _statusFilter;
-            set
-            {
-                _statusFilter = value;
-                UpdateFilter();
-            }
-        }
-
-        private void UpdateFilter()
-        {
-            LoaderManager.Instance.ShowLoader();
-            var users = new ObservableCollection<User>(StationManager.DataStorage.UsersList);
-            var selectedUsers =
-                (from u in users
-                    where u.Name.Contains(NameFilter) &&
-                          u.IsAdult.Contains(StatusFilter) &&
-                          u.Surname.Contains(SurnameFilter) &&
-                          u.Email.Contains(EmailFilter) &&
-                          u.IsBirthday.Contains(BthFilter) &&
-                          u.SunSign.Contains(SunSFilter) &&
-                          u.ChineseSign.Contains(ChineseSFilter) &&
-                          u.BirthDay >= FromBthFilter && u.BirthDay <= ToBthFilter
-                    select u);
-
-            Users = new ObservableCollection<User>(selectedUsers);
-            LoaderManager.Instance.HideLoader();
-        }
-
-        public UserListViewModel(User p)
-        {
-            _users = new ObservableCollection<User>(StationManager.DataStorage.UsersList);
+            MyProcesses = new ObservableCollection<MyProcess>();
+            ViewSource = new CollectionViewSource {Source = MyProcesses};
             _tokenSource = new CancellationTokenSource();
             _token = _tokenSource.Token;
+            LastUpdate= "00:00";
+            StartBackgroundWorker();
             StartWorkingThread();
             StationManager.StopThreads += StopWorkingThread;
+            StationManager.StopThreads += StopBackgroundWorker;
         }
 
         private void StartWorkingThread()
@@ -172,82 +83,190 @@ namespace KMA.ProgrammingInCSharp2019.Practice7.UserList.ViewModels
 
         private void WorkingThreadProcess()
         {
+            var processes = Process.GetProcesses();
             LoaderManager.Instance.ShowLoader();
-            var users = _users.ToList();
-            if (users.Count == 0)
+            foreach (var o in processes)
             {
-                var i = 0;
-                while (i < 50)
-                {
-                    i++;
-                    var user = new User(
-                        User.Names[i],
-                        User.Lastnames[i],
-                        $"{User.Lastnames[i]}@gmail.com",
-                        User.RandomDateBirth());
-                    StationManager.DataStorage.AddUser(user);
-
-                }
+                Application.Current.Dispatcher.Invoke(delegate { MyProcesses.Add(new MyProcess(o)); });
             }
-            Users = new ObservableCollection<User>(StationManager.DataStorage.UsersList);
             LoaderManager.Instance.HideLoader();
+            _loaded = true;
         }
 
-        public static ObservableCollection<T> ToObservableCollection<T>(IEnumerable<T> enumerable)
+        private void StartBackgroundWorker()
         {
-            var col = new ObservableCollection<T>();
-            foreach (var cur in enumerable)
+            _backgroundWorker = new BackgroundWorker
             {
-                col.Add(cur);
-            }
-            return col;
+                WorkerSupportsCancellation = true,
+                WorkerReportsProgress = true
+            };
+            _backgroundUpdater = new BackgroundWorker
+            {
+                WorkerSupportsCancellation = true,
+                WorkerReportsProgress = true
+            };
+            _backgroundTimer = new BackgroundWorker
+            {
+                WorkerSupportsCancellation = true,
+                WorkerReportsProgress = true
+            };
+            _backgroundUpdater.DoWork += BackgroundUpdaterProcess;
+            _backgroundWorker.DoWork += BackgroundWorkerProcess;
+            _backgroundTimer.DoWork += BackgroundTimerProcess;
+            _backgroundWorker.ProgressChanged += BackgroundWorkerOnProgressChanged;
+            _backgroundWorker.RunWorkerAsync();
+            _backgroundUpdater.RunWorkerAsync();
+            _backgroundTimer.RunWorkerAsync();
         }
-        private async void Result(object obj)
+
+        private void BackgroundWorkerProcess(object sender, DoWorkEventArgs doWorkEventArgs)
         {
-            LoaderManager.Instance.ShowLoader();
-            var approve = await Task.Run(() =>
+            var worker = (BackgroundWorker) sender;
+            while(!_loaded)
+                Thread.Sleep(2000);
+            while (!worker.CancellationPending)
             {
+                if (worker.CancellationPending)
+                {
+                    doWorkEventArgs.Cancel = true;
+                    _tokenSource.Cancel();
+                    break;
+                }
+                var excludedIDs = new List<int>(MyProcesses.Select(p => p.Id));
+                var includedIds = Process.GetProcesses().Select(p => p.Id).ToList();
+                var newProcesses = includedIds.Except(excludedIDs).ToList();
+                var removedProcess = excludedIDs.Except(includedIds).ToList();
+                foreach (var o in newProcesses)
+                {
+                    worker.ReportProgress(10, o);
+                }
+                foreach (var o in removedProcess)
+                {
+                    worker.ReportProgress(10, o);
+                }
+
+                _time = 0;
+                Thread.Sleep(3000);
+            }
+        }
+        private void BackgroundTimerProcess(object sender, DoWorkEventArgs doWorkEventArgs)
+        {
+            var worker = (BackgroundWorker)sender;
+            while (!_loaded)
+                Thread.Sleep(2000);
+            while (!worker.CancellationPending)
+            {
+                if (worker.CancellationPending)
+                {
+                    doWorkEventArgs.Cancel = true;
+                    _tokenSource.Cancel();
+                    break;
+                }
+                LastUpdate = $"00:0{_time}";
+                _time++;
+                Thread.Sleep(1000);
+            }
+        }
+        private void BackgroundUpdaterProcess(object sender, DoWorkEventArgs doWorkEventArgs)
+        {
+            var worker = (BackgroundWorker) sender;
+            while (!_loaded)
+                Thread.Sleep(2000);
+            while (!worker.CancellationPending)
+            {
+                if (worker.CancellationPending)
+                {
+                    doWorkEventArgs.Cancel = true;
+                    _tokenSource.Cancel();
+                    break;
+                }
+
                 try
                 {
-                    Thread.Sleep(2000);
-                    StationManager.DataStorage.SaveChanges();
-                    return true;
+                    UpdateData();
                 }
-                catch (Exception e)
+                catch
                 {
-                    MessageBox.Show(e.Message, "Error");
-                    return false;
+                    // ignored
                 }
-            }, _token);
-            LoaderManager.Instance.HideLoader();
-            if (approve)
-                MessageBox.Show("Saved");
+
+                Thread.Sleep(2000);
+            }
         }
 
-        private void DeleteUsers(object obj)
+        private void UpdateData()
         {
+            foreach (var p in MyProcesses)
+            {
+                p.UpdateData();
+            }
+        }
+
+        private async void BackgroundWorkerOnProgressChanged(object sender,
+            ProgressChangedEventArgs args)
+        {
+            await Task.Run(() =>
+            {
+                Application.Current.Dispatcher.Invoke(delegate
+                {
+                    try
+                    {
+                        var p = Process.GetProcessById((int) args.UserState);
+                        MyProcesses.Add(new MyProcess(p));
+                    }
+                    catch (ArgumentException)
+                    {
+                        try
+                        {
+                            MyProcesses.Remove(MyProcesses.First(i => i.Id == (int) args.UserState));
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
+                    }
+                        
+                });
+            });
+        }
+
+        internal void StopBackgroundWorker()
+        {
+            if (_backgroundWorker == null) return;
+            _backgroundWorker.CancelAsync();
+            for (int i = 0; i < 4; i++)
+            {
+                if (_token.IsCancellationRequested)
+                    break;
+                Thread.Sleep(500);
+            }
+
+            _backgroundWorker.Dispose();
+            _backgroundWorker = null;
+        }
+
+
+        private void GetInfo(object obj)
+        {
+            LoaderManager.Instance.ShowLoader();
+
             System.Collections.IList collection = obj as System.Collections.IList;
-            User[] a = new User[collection.Count];
-            var i = 0;
-            foreach (User u in collection.OfType<User>())
+            try
             {
-                a[i] = u;
-                i++;
+                var selectedProcess = (collection ?? throw new InvalidOperationException()).OfType<MyProcess>().First();
+                NavigationManager.Instance.Navigate(ViewType.SeeInfo, selectedProcess);
             }
+            catch(Exception e)
+            {
+                MessageBox.Show(e.Message);
+                LoaderManager.Instance.HideLoader();
+                return;
+            }
+            LoaderManager.Instance.HideLoader();
+        }
 
-            for (var k = 0; k < i; k++)
-            {
-                Users.Remove(a[k]);
-                StationManager.DataStorage.RemoveUser(a[k]);
-            }
-        }
-        private void CreateUser(object obj)
-        {
-            NavigationManager.Instance.Navigate(ViewType.AddUser);
-        }
-        public ICommand SaveCommand => _saveCommand ?? (_saveCommand = new RelayCommand<object>(Result));
-        public ICommand CreateUserCommand => _createUserCommand ?? (_createUserCommand = new RelayCommand<object>(CreateUser));
-        public ICommand DeleteUsersCommand => _deleteUsersCommand ?? (_deleteUsersCommand = new RelayCommand<object>(DeleteUsers));
+        public ICommand GetInfoCommand => _saveCommand ?? (_saveCommand = new RelayCommand<object>(GetInfo));
+
         internal void StopWorkingThread()
         {
             _tokenSource.Cancel();

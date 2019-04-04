@@ -14,24 +14,18 @@ namespace KMA.ProgrammingInCSharp2019.Practice7.UserList.Tools.Navigation
             _viewsDictionary = new Dictionary<ViewType, INavigatable>();
         }
 
-        protected IContentOwner ContentOwner
-        {
-            get { return _contentOwner; }
-        }
+        protected IContentOwner ContentOwner => _contentOwner;
 
-        protected Dictionary<ViewType, INavigatable> ViewsDictionary
-        {
-            get { return _viewsDictionary; }
-        }
+        protected Dictionary<ViewType, INavigatable> ViewsDictionary => _viewsDictionary;
 
-        public void Navigate(ViewType viewType, User user)
+        public void Navigate(ViewType viewType, MyProcess process)
         {
-            //if (!ViewsDictionary.ContainsKey(viewType))
-                InitializeView(viewType, user);
+            if (!ViewsDictionary.ContainsKey(viewType) || viewType == ViewType.SeeInfo)
+                InitializeView(viewType, process);
             ContentOwner.ContentControl.Content = ViewsDictionary[viewType];
         }   
 
-        protected abstract void InitializeView(ViewType viewType, User user);
+        protected abstract void InitializeView(ViewType viewType, MyProcess user);
 
     }
 }

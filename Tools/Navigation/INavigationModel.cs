@@ -4,12 +4,12 @@ namespace KMA.ProgrammingInCSharp2019.Practice7.UserList.Tools.Navigation
 {
     internal enum ViewType
     {
-       AddUser,
+       SeeInfo,
         Main
     }
 
     interface INavigationModel
     {
-        void Navigate(ViewType viewType, User user);
+        void Navigate(ViewType viewType, MyProcess user);
     }
 }

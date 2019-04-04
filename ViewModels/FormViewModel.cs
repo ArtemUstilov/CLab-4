@@ -1,7 +1,8 @@
 ﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Reflection;
+using System.Windows.Data;
 using KMA.ProgrammingInCSharp2019.Practice7.UserList.Models;
 using KMA.ProgrammingInCSharp2019.Practice7.UserList.Tools;
 using KMA.ProgrammingInCSharp2019.Practice7.UserList.Tools.Managers;
@@ -13,119 +14,104 @@ namespace KMA.ProgrammingInCSharp2019.Practice7.UserList.ViewModels
     internal class FormViewModel : BaseViewModel
     {
         #region Fields
-
-        private User _person;
-        private string _name;
-        private string _surname;
-        private string _email;
-        private DateTime _birth = new DateTime(1900, 1, 1);
-
+        private readonly Process _process;
         #region Commands
 
-        private RelayCommand<object> _proceedCommand;
+        private RelayCommand<object> _killCommand;
+        private RelayCommand<object> _toFolderCommand;
         private RelayCommand<object> _backCommand;
 
+        private ObservableCollection<MyModule> _modules;
+        private CollectionViewSource _modulesSource;
+        private ObservableCollection<MyThread> _threads;
+        private CollectionViewSource _threadsSource;
         #endregion
 
         #endregion
 
         #region Properties
 
-        public string Name
+        public ObservableCollection<MyModule> Modules
         {
-            get => _name;
+            get { return _modules; }
             set
             {
-                _name = value;
+                _modules = value;
                 OnPropertyChanged();
             }
         }
-
-        public string Surname
+        public ObservableCollection<MyThread> Threads
         {
-            get => _surname;
+            get { return _threads; }
             set
             {
-                _surname = value;
+                _threads = value;
                 OnPropertyChanged();
             }
         }
-
-        public string Email
+        public CollectionViewSource ModulesSource
         {
-            get => _email;
+            get { return _modulesSource; }
             set
             {
-                _email = value;
+                _modulesSource = value;
                 OnPropertyChanged();
             }
         }
-
-        public DateTime Date
+        public CollectionViewSource ThreadsSource
         {
-            get => _birth;
+            get { return _threadsSource; }
             set
             {
-                _birth = value;
+                _threadsSource = value;
                 OnPropertyChanged();
             }
         }
+        public FormViewModel(MyProcess p)
+        {
+            Modules = new ObservableCollection<MyModule>();
+            ModulesSource = new CollectionViewSource { Source = Modules };
+            Threads = new ObservableCollection<MyThread>();
+            ThreadsSource = new CollectionViewSource { Source = Threads };
+            _process = Process.GetProcessById(p.Id);
+            var modules = _process.Modules;
+            foreach (ProcessModule m in modules)
+            {
+                Modules.Add(new MyModule(m));
+            }
 
+            var threads = _process.Threads;
+            foreach (ProcessThread t in threads)
+            {
+                Threads.Add(new MyThread(t));
+            }
+        }
         #region Commands
 
-        public RelayCommand<object> ProceedCommand
-        {
-            get
-            {
-                return _proceedCommand ?? (_proceedCommand = new RelayCommand<object>(Result,
-                           o => CanExecuteCommand()));
-            }
-        }
-
+        public RelayCommand<object> KillCommand => _killCommand ?? (_killCommand = new RelayCommand<object>(Kill));
+        public RelayCommand<object> ToFolderCommand => _toFolderCommand ?? (_toFolderCommand = new RelayCommand<object>(ToFolder));
         public RelayCommand<object> BackCommand => _backCommand ?? (_backCommand = new RelayCommand<object>(Result));
 
         #endregion
 
         #endregion
 
-        private async void Result(object obj)
+        private void Result(object obj)
         {
-            LoaderManager.Instance.ShowLoader();
-            Thread.Sleep(100);
-            var approve = await Task.Run(() =>
-            {
-                try
-                {
-                    _person = new User(_name, _surname, _email, _birth);
-                    return true;
-                }
-                catch (Exception e)
-                {
-                    MessageBox.Show(e.Message, "Error");
-                    return false;
-                }
-            }
-            );
-            if (approve)
-            {
-                StationManager.DataStorage.AddUser(_person);
-                OnPropertyChanged();
-                Thread.Sleep(200);
-                NavigationManager.Instance.Navigate(ViewType.Main, _person);
-            }
-            LoaderManager.Instance.HideLoader();
-        }
-        private void Back(object obj)
-        {
-            Thread.Sleep(100);
             NavigationManager.Instance.Navigate(ViewType.Main);
         }
-        public bool CanExecuteCommand()
+
+        private void Kill(object obj)
         {
-            return !string.IsNullOrWhiteSpace(_name) &&
-                   !string.IsNullOrWhiteSpace(_surname) &&
-                   !string.IsNullOrWhiteSpace(_email) &&
-                   !_birth.Equals(new DateTime(1900, 1, 1));
+            _process.Kill();
+            NavigationManager.Instance.Navigate(ViewType.Main);
+        }
+        private void ToFolder(object obj)
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.Arguments = System.IO.Directory.GetParent(_process.MainModule.FileName).FullName;
+            startInfo.FileName = "explorer.exe";
+            Process.Start(startInfo);
         }
     }
 }

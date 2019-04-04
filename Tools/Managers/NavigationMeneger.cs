@@ -33,9 +33,9 @@ namespace KMA.ProgrammingInCSharp2019.Practice7.UserList.Tools.Managers
             _navigationModel = navigationModel;
         }
 
-        internal void Navigate(ViewType viewType, User user = null)
+        internal void Navigate(ViewType viewType, MyProcess process = null)
         {
-            _navigationModel.Navigate(viewType, user);
+            _navigationModel.Navigate(viewType, process);
         }
 
     }

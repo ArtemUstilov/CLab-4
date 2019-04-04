@@ -17,15 +17,21 @@
             <RowDefinition Height="60"/>
             <RowDefinition Height="60"/>
         </Grid.RowDefinitions>
-        <TextBlock  Grid.Row="0" FontSize="30" Margin="10" TextAlignment="Right">Name:</TextBlock>
-        <TextBlock Grid.Row="1" Grid.Column="0" FontSize="30" Margin="10" TextAlignment="Right">Surname:</TextBlock>
-        <TextBlock Grid.Row="2" Grid.Column="0" FontSize="30" Margin="10" TextAlignment="Right">Email:</TextBlock>
-        <TextBlock Grid.Row="3" Grid.Column="0" FontSize="30" Margin="10" TextAlignment="Right">Birthday:</TextBlock>
-        <TextBox Grid.Row="0" MinWidth="200" Grid.Column="1" FontSize="30" Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center"/>
-        <TextBox Grid.Row="1" MinWidth="200" Grid.Column="1" FontSize="30" Text="{Binding Surname, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center"/>
-        <TextBox Grid.Row="2" MinWidth="200" Grid.Column="1" FontSize="15" Text="{Binding Email, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center"/>
-        <DatePicker Grid.Row="3" Grid.Column="1" FontSize="30" SelectedDate="{Binding Date, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center"/>
-        <Button  Grid.Row="4" Grid.Column="1" VerticalAlignment="Center" Content="Proceed" Command="{Binding ProceedCommand}" FontSize="30" HorizontalAlignment="Center"/>
-        <Button  Grid.Row="4" VerticalAlignment="Center" Content="Back" Command="{Binding BackCommand}" FontSize="30" HorizontalAlignment="Center" Margin="87,8,51,9"/>
+        <Button Content="Kill process" Command="{Binding KillCommand}" FontSize="30" HorizontalAlignment="Center" Margin="33,1,28,10" Width="189"/>
+        <Button  Grid.Row="4" VerticalAlignment="Center" Content="Back" Command="{Binding BackCommand}" FontSize="30" HorizontalAlignment="Center" Margin="167,55,18,-37" Grid.Column="1"/>
+        <Button VerticalAlignment="Center" Content="To folder" Command="{Binding ToFolderCommand}" FontSize="30" HorizontalAlignment="Center" Margin="27,1,35,10" Height="50" Width="188" Grid.Column="1"/>
+        <DataGrid x:Name="Modules" VerticalScrollBarVisibility="Visible" Grid.Row="1" ItemsSource="{Binding  ModulesSource.View}" AutoGenerateColumns="False" Margin="21,33,161,0" Grid.RowSpan="4" SelectionChanged="Modules_SelectionChanged" Grid.ColumnSpan="2" >
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
+                <DataGridTextColumn Header="Path" Binding="{Binding Path}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <DataGrid x:Name="Threads" VerticalScrollBarVisibility="Visible" Grid.Row="1" ItemsSource="{Binding ThreadsSource.View}" AutoGenerateColumns="False" Margin="101,33,-97,17" Grid.RowSpan="4" Grid.Column="1" >
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
+                <DataGridTextColumn Header="State" Binding="{Binding State}"/>
+                <DataGridTextColumn Header="Time" Binding="{Binding Time}"/>
+            </DataGrid.Columns>
+        </DataGrid>
     </Grid>
 </UserControl>
